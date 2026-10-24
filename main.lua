@@ -1,40 +1,71 @@
 
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local Players = game:GetService("Players")
 
 local player = Players.LocalPlayer
 
 ------------------------------------------------------------------------
--- CONFIG VALIDATION
+-- CONFIG
 ------------------------------------------------------------------------
+
 local function getConfig()
     shared.glimmer = shared.glimmer or {}
 
-    shared.glimmer['General'] =
-        shared.glimmer['General'] or {}
+    local config = shared.glimmer
 
-    shared.glimmer['Skin Changer'] =
-        shared.glimmer['Skin Changer'] or {}
+    config['General'] = config['General'] or {}
+    config['General']['Keybinds'] =
+        config['General']['Keybinds'] or {}
 
-    return shared.glimmer
+    config['General']['Display Keybinds'] =
+        config['General']['Display Keybinds'] or {}
+
+    config['Skin Changer'] = config['Skin Changer'] or {}
+
+    return config
+end
+
+------------------------------------------------------------------------
+-- CLEANUP
+------------------------------------------------------------------------
+
+local function cleanup()
+    pcall(function()
+        RunService:UnbindFromRenderStep("GlimmerSkinChanger")
+    end)
+
+    if shared.glimmer_display
+        and shared.glimmer_display.Destroy then
+        pcall(function()
+            shared.glimmer_display.Destroy()
+        end)
+    end
+
+    shared.glimmer_display = nil
+
+    local playerGui = player:FindFirstChildOfClass("PlayerGui")
+    if playerGui then
+        local oldGui = playerGui:FindFirstChild("GlimmerDisplay")
+        if oldGui then
+            oldGui:Destroy()
+        end
+    end
 end
 
 ------------------------------------------------------------------------
 -- SKIN CHANGER
 ------------------------------------------------------------------------
+
 local function SkinChanger()
     local cfg = getConfig()['Skin Changer']
-
-    pcall(function()
-        RunService:UnbindFromRenderStep("GlimmerSkinChanger")
-    end)
 
     if not cfg['Enabled'] then
         return
     end
 
-    -- Texture IDs from your original main.lua.
+    -- Original Galaxy texture IDs supplied in your script.
+    -- Restore your other original skin tables here to support them.
     local Skins = {
         Galaxy = {
             ['[SilencerAR]'] = 9402007158,
@@ -55,8 +86,81 @@ local function SkinChanger()
             ['[Double-Barrel SG]'] = 9401441647,
         },
 
-        -- Add the original Inferno, Matrix, RedDeath,
-        -- and GoldGlory tables here if you still use them.
+        Inferno = {
+            ['[SilencerAR]'] = 9401972413,
+            ['[SMG]'] = 9387593777,
+            ['[TacticalShotgun]'] = 9402244359,
+            ['[AK47]'] = 9402094255,
+            ['[AUG]'] = 9401802930,
+            ['[AR]'] = 9401972413,
+            ['[Glock]'] = 9401670081,
+            ['[Shotgun]'] = 9387831940,
+            ['[Silencer]'] = 9401670081,
+            ['[P90]'] = 9399878713,
+            ['[Revolver]'] = 9370404463,
+            ['[RPG]'] = 9399831924,
+            ['[LMG]'] = 9400160302,
+            ['[Flamethrower]'] = 9400503673,
+            ['[DrumGun]'] = 9381496666,
+            ['[Double-Barrel SG]'] = 9401416743,
+        },
+
+        Matrix = {
+            ['[SilencerAR]'] = 9402023983,
+            ['[SMG]'] = 9387681455,
+            ['[TacticalShotgun]'] = 9402295362,
+            ['[AK47]'] = 9402147406,
+            ['[AUG]'] = 9401855319,
+            ['[AR]'] = 9402023983,
+            ['[Glock]'] = 9401727978,
+            ['[Shotgun]'] = 9387945198,
+            ['[Silencer]'] = 9401727978,
+            ['[P90]'] = 9399894480,
+            ['[Revolver]'] = 9380928144,
+            ['[RPG]'] = 9399850204,
+            ['[LMG]'] = 9400178599,
+            ['[Flamethrower]'] = 9400582867,
+            ['[DrumGun]'] = 9381601709,
+            ['[Double-Barrel SG]'] = 9401457713,
+        },
+
+        RedDeath = {
+            ['[SilencerAR]'] = 8213168054,
+            ['[SMG]'] = 8199875638,
+            ['[TacticalShotgun]'] = 9203641766,
+            ['[AK47]'] = 8213572965,
+            ['[AUG]'] = 8212802637,
+            ['[AR]'] = 8213168054,
+            ['[Glock]'] = 8212637463,
+            ['[Shotgun]'] = 8200647420,
+            ['[Silencer]'] = 8212637463,
+            ['[P90]'] = 8205381104,
+            ['[Revolver]'] = 8173928665,
+            ['[RPG]'] = 8201055935,
+            ['[LMG]'] = 8205713344,
+            ['[Flamethrower]'] = 8206707126,
+            ['[DrumGun]'] = 8186385983,
+            ['[Double-Barrel SG]'] = 8212384179,
+        },
+
+        GoldGlory = {
+            ['[SilencerAR]'] = 8213175568,
+            ['[SMG]'] = 8199883519,
+            ['[TacticalShotgun]'] = 9203647967,
+            ['[AK47]'] = 8213606202,
+            ['[AUG]'] = 8212809463,
+            ['[AR]'] = 8213175568,
+            ['[Glock]'] = 8212667115,
+            ['[Shotgun]'] = 8200657428,
+            ['[Silencer]'] = 8212667115,
+            ['[P90]'] = 8205397990,
+            ['[Revolver]'] = 8173955378,
+            ['[RPG]'] = 8201059812,
+            ['[LMG]'] = 8205719479,
+            ['[Flamethrower]'] = 8208010648,
+            ['[DrumGun]'] = 8186168230,
+            ['[Double-Barrel SG]'] = 8212394280,
+        },
     }
 
     RunService:BindToRenderStep(
@@ -64,12 +168,14 @@ local function SkinChanger()
         Enum.RenderPriority.Last.Value,
         function()
             local character = player.Character
-            if not character then return end
+            if not character then
+                return
+            end
 
-            for weapon, skin in pairs(cfg['Weapons'] or {}) do
+            for weapon, skinName in pairs(cfg['Weapons'] or {}) do
                 local tool = character:FindFirstChild(weapon)
-                local skinData = Skins[skin]
-                local textureId = skinData and skinData[weapon]
+                local skin = Skins[skinName]
+                local textureId = skin and skin[weapon]
 
                 if tool and textureId then
                     local part = tool:FindFirstChild("Default")
@@ -91,22 +197,17 @@ end
 ------------------------------------------------------------------------
 -- DISPLAY KEYBINDS HUD
 ------------------------------------------------------------------------
+
 local function DisplayKeybinds()
     local general = getConfig()['General']
     local disp = general['Display Keybinds']
     local binds = general['Keybinds']
 
-    if shared.glimmer_display
-        and shared.glimmer_display.Destroy then
-        pcall(function()
-            shared.glimmer_display.Destroy()
-        end)
-    end
-
-    if not (disp and disp['Enabled'] and binds) then
+    if not (disp['Enabled'] and binds) then
         return
     end
 
+    -- Ragebot and Rapid Fire are deliberately excluded.
     local features = {
         'Silent Aim',
         'Aim Assist',
@@ -116,133 +217,126 @@ local function DisplayKeybinds()
     }
 
     local state = {}
-
     for _, name in ipairs(features) do
         state[name] = false
     end
 
-    local parent
-    if gethui then
-        local ok, result = pcall(gethui)
-        if ok then
-            parent = result
-        end
-    end
-
-    parent = parent or player:WaitForChild("PlayerGui")
-
-    local oldGui = parent:FindFirstChild("GlimmerDisplay")
-    if oldGui then
-        oldGui:Destroy()
-    end
+    local playerGui = player:WaitForChild("PlayerGui")
 
     local gui = Instance.new("ScreenGui")
     gui.Name = "GlimmerDisplay"
     gui.ResetOnSpawn = false
     gui.IgnoreGuiInset = true
-    gui.DisplayOrder = 20
-    gui.Parent = parent
+    gui.DisplayOrder = 100
+    gui.Parent = playerGui
 
     local main = Instance.new("Frame")
-    main.Name = "Container"
+    main.Name = "Panel"
     main.AnchorPoint = Vector2.new(0.5, 0)
-    main.Position = UDim2.new(0.5, 0, 0, 16)
-    main.Size = UDim2.new(0, 235, 0, 0)
+    main.Position = UDim2.new(0.5, 0, 0, 20)
+    main.Size = UDim2.fromOffset(250, 0)
     main.AutomaticSize = Enum.AutomaticSize.Y
-    main.BackgroundColor3 = Color3.fromRGB(19, 19, 24)
-    main.BackgroundTransparency = 0.05
+    main.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
     main.BorderSizePixel = 0
     main.Parent = gui
 
-    local mainCorner = Instance.new("UICorner")
-    mainCorner.CornerRadius = UDim.new(0, 10)
-    mainCorner.Parent = main
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = main
 
-    local outline = Instance.new("UIStroke")
-    outline.Color = Color3.fromRGB(95, 37, 48)
-    outline.Thickness = 1
-    outline.Transparency = 0.1
-    outline.Parent = main
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(110, 38, 50)
+    stroke.Thickness = 1
+    stroke.Transparency = 0.15
+    stroke.Parent = main
 
     local padding = Instance.new("UIPadding")
-    padding.PaddingTop = UDim.new(0, 10)
-    padding.PaddingBottom = UDim.new(0, 10)
-    padding.PaddingLeft = UDim.new(0, 10)
-    padding.PaddingRight = UDim.new(0, 10)
+    padding.PaddingTop = UDim.new(0, 12)
+    padding.PaddingBottom = UDim.new(0, 12)
+    padding.PaddingLeft = UDim.new(0, 12)
+    padding.PaddingRight = UDim.new(0, 12)
     padding.Parent = main
 
     local layout = Instance.new("UIListLayout")
     layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, 5)
+    layout.Padding = UDim.new(0, 6)
     layout.Parent = main
 
-    local function rounded(instance, radius)
-        local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, radius)
-        corner.Parent = instance
+    local function round(instance, radius)
+        local c = Instance.new("UICorner")
+        c.CornerRadius = UDim.new(0, radius)
+        c.Parent = instance
     end
 
     local title = Instance.new("TextLabel")
     title.Name = "Title"
-    title.BackgroundTransparency = 1
-    title.Size = UDim2.new(1, 0, 0, 23)
     title.LayoutOrder = 1
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 16
+    title.Size = UDim2.new(1, 0, 0, 25)
+    title.BackgroundTransparency = 1
+    title.Font = Enum.Font.GothamBlack
     title.Text = disp['Title'] or "Glimmerlol"
     title.TextColor3 =
         disp['Glimmer Title'] or Color3.fromRGB(255, 55, 70)
+    title.TextSize = 18
     title.Parent = main
 
+    local subtitle = Instance.new("TextLabel")
+    subtitle.LayoutOrder = 2
+    subtitle.Size = UDim2.new(1, 0, 0, 13)
+    subtitle.BackgroundTransparency = 1
+    subtitle.Font = Enum.Font.GothamMedium
+    subtitle.Text = "FEATURE STATUS"
+    subtitle.TextColor3 = Color3.fromRGB(135, 135, 150)
+    subtitle.TextSize = 9
+    subtitle.Parent = main
+
     local accent = Instance.new("Frame")
-    accent.Name = "Accent"
+    accent.LayoutOrder = 3
     accent.Size = UDim2.new(1, 0, 0, 2)
-    accent.LayoutOrder = 2
-    accent.BackgroundColor3 = Color3.fromRGB(255, 55, 70)
+    accent.BackgroundColor3 = Color3.fromRGB(255, 55, 75)
     accent.BorderSizePixel = 0
     accent.Parent = main
-    rounded(accent, 2)
+    round(accent, 2)
 
     local labels = {}
 
     for index, name in ipairs(features) do
         local row = Instance.new("Frame")
         row.Name = name:gsub("%s+", "")
-        row.Size = UDim2.new(1, 0, 0, 24)
-        row.LayoutOrder = index + 2
-        row.BackgroundColor3 = Color3.fromRGB(30, 30, 37)
+        row.LayoutOrder = index + 3
+        row.Size = UDim2.new(1, 0, 0, 33)
+        row.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
         row.BorderSizePixel = 0
         row.Parent = main
-        rounded(row, 5)
+        round(row, 7)
 
-        local featureLabel = Instance.new("TextLabel")
-        featureLabel.BackgroundTransparency = 1
-        featureLabel.Position = UDim2.new(0, 8, 0, 0)
-        featureLabel.Size = UDim2.new(1, -64, 1, 0)
-        featureLabel.Font = Enum.Font.GothamMedium
-        featureLabel.TextSize = 11
-        featureLabel.TextXAlignment = Enum.TextXAlignment.Left
-        featureLabel.TextColor3 = Color3.fromRGB(225, 225, 232)
-        featureLabel.Text = string.lower(name)
-        featureLabel.Parent = row
+        local feature = Instance.new("TextLabel")
+        feature.BackgroundTransparency = 1
+        feature.Position = UDim2.new(0, 9, 0, 0)
+        feature.Size = UDim2.new(1, -75, 1, 0)
+        feature.Font = Enum.Font.GothamMedium
+        feature.Text = name
+        feature.TextColor3 = Color3.fromRGB(230, 230, 238)
+        feature.TextSize = 12
+        feature.TextXAlignment = Enum.TextXAlignment.Left
+        feature.Parent = row
 
         local status = Instance.new("TextLabel")
         status.Name = "Status"
         status.AnchorPoint = Vector2.new(1, 0.5)
-        status.Position = UDim2.new(1, -6, 0.5, 0)
-        status.Size = UDim2.new(0, 43, 0, 17)
-        status.BackgroundColor3 = Color3.fromRGB(67, 31, 38)
+        status.Position = UDim2.new(1, -7, 0.5, 0)
+        status.Size = UDim2.fromOffset(48, 21)
+        status.BackgroundColor3 = Color3.fromRGB(66, 33, 40)
         status.BorderSizePixel = 0
         status.Font = Enum.Font.GothamBold
-        status.TextSize = 10
         status.Text = "OFF"
-        status.TextColor3 = Color3.fromRGB(255, 105, 115)
+        status.TextColor3 = Color3.fromRGB(255, 105, 120)
+        status.TextSize = 10
         status.Parent = row
-        rounded(status, 4)
+        round(status, 5)
 
         labels[name] = {
-            row = row,
-            feature = featureLabel,
+            feature = feature,
             status = status,
         }
     end
@@ -253,26 +347,22 @@ local function DisplayKeybinds()
             local enabled = state[name]
 
             item.status.Text = enabled and "ON" or "OFF"
-
             item.status.TextColor3 = enabled
-                and Color3.fromRGB(105, 255, 160)
-                or Color3.fromRGB(255, 105, 115)
+                and Color3.fromRGB(105, 255, 165)
+                or Color3.fromRGB(255, 105, 120)
 
             item.status.BackgroundColor3 = enabled
-                and Color3.fromRGB(24, 67, 46)
-                or Color3.fromRGB(67, 31, 38)
-
-            item.feature.TextColor3 = enabled
-                and Color3.fromRGB(255, 255, 255)
-                or Color3.fromRGB(190, 190, 200)
+                and Color3.fromRGB(25, 68, 46)
+                or Color3.fromRGB(66, 33, 40)
         end
     end
 
-    refresh()
-
     local connection = UserInputService.InputBegan:Connect(
         function(input, processed)
-            if processed then return end
+            if processed then
+                return
+            end
+
             if input.UserInputType ~= Enum.UserInputType.Keyboard then
                 return
             end
@@ -288,6 +378,8 @@ local function DisplayKeybinds()
             refresh()
         end
     )
+
+    refresh()
 
     shared.glimmer_display = {
         State = state,
@@ -309,5 +401,7 @@ end
 ------------------------------------------------------------------------
 -- INITIALIZE
 ------------------------------------------------------------------------
+
+cleanup()
 SkinChanger()
 DisplayKeybinds()
