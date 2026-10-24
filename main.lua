@@ -1,3 +1,4 @@
+```lua
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
@@ -23,6 +24,11 @@ local function getConfig()
             ['Keybind'] = 'B',
         }
 
+    -- Remove Ragebot from existing keybind configuration
+    if shared.glimmer['General']['Keybinds'] then
+        shared.glimmer['General']['Keybinds']['Ragebot'] = nil
+    end
+
     return shared.glimmer
 end
 
@@ -40,8 +46,6 @@ local function SkinChanger()
         return
     end
 
-    -- Keep your existing Skins table here, unchanged.
-    -- Example structure:
     local Skins = {
         Galaxy = {
             ['[SilencerAR]'] = 9402007158,
@@ -109,11 +113,11 @@ local function DisplayKeybinds()
         return
     end
 
+    -- Ragebot removed
     local features = {
         'Silent Aim',
         'Aim Assist',
         'Trigger Bot',
-        'Ragebot',
         'Speed',
         'ESP',
     }
@@ -294,3 +298,4 @@ end
 SkinChanger()
 DisplayKeybinds()
 RapidFire()
+```
