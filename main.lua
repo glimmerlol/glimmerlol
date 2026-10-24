@@ -1,35 +1,56 @@
-```lua
+
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
 
 local player = Players.LocalPlayer
+
+------------------------------------------------------------------------
+-- CLEANUP OLD HUD
+------------------------------------------------------------------------
+if shared.glimmer_display then
+    pcall(function()
+        shared.glimmer_display.Destroy()
+    end)
+    shared.glimmer_display = nil
+end
+
+pcall(function()
+    local old = CoreGui:FindFirstChild("GlimmerDisplay")
+    if old then
+        old:Destroy()
+    end
+end)
 
 ------------------------------------------------------------------------
 -- CONFIG
 ------------------------------------------------------------------------
 local function getConfig()
     shared.glimmer = shared.glimmer or {}
+    local config = shared.glimmer
 
-    shared.glimmer['General'] =
-        shared.glimmer['General'] or {}
+    config['General'] = config['General'] or {}
+    local general = config['General']
 
-    shared.glimmer['Skin Changer'] =
-        shared.glimmer['Skin Changer'] or {}
+    general['Keybinds'] = general['Keybinds'] or {}
+    general['Keybinds']['Ragebot'] = nil
 
-    shared.glimmer['Rapid Fire'] =
-        shared.glimmer['Rapid Fire'] or {
-            ['Enabled'] = true,
-            ['Delay'] = 0.1,
-            ['Keybind'] = 'B',
-        }
+    general['Display Keybinds'] =
+        general['Display Keybinds'] or {}
 
-    -- Remove Ragebot from existing keybind configuration
-    if shared.glimmer['General']['Keybinds'] then
-        shared.glimmer['General']['Keybinds']['Ragebot'] = nil
-    end
+    config['Skin Changer'] = config['Skin Changer'] or {
+        ['Enabled'] = true,
+        ['Weapons'] = {},
+    }
 
-    return shared.glimmer
+    config['Rapid Fire'] = config['Rapid Fire'] or {
+        ['Enabled'] = true,
+        ['Delay'] = 0.1,
+        ['Keybind'] = 'B',
+    }
+
+    return config
 end
 
 ------------------------------------------------------------------------
@@ -81,6 +102,7 @@ local function SkinChanger()
 
                 if tool and id then
                     local part = tool:FindFirstChild("Default")
+
                     if part and part:IsA("MeshPart") then
                         local texture = "rbxassetid://" .. tostring(id)
 
@@ -102,18 +124,26 @@ local function DisplayKeybinds()
     local disp = general['Display Keybinds']
     local binds = general['Keybinds']
 
-    if shared.glimmer_display
-        and shared.glimmer_display.Destroy then
+    -- Always remove any previous HUD first.
+    pcall(function()
+        local old = CoreGui:FindFirstChild("GlimmerDisplay")
+        if old then
+            old:Destroy()
+        end
+    end)
+
+    if shared.glimmer_display then
         pcall(function()
             shared.glimmer_display.Destroy()
         end)
+        shared.glimmer_display = nil
     end
 
     if not (disp and disp['Enabled'] and binds) then
         return
     end
 
-    -- Ragebot removed
+    -- Ragebot is intentionally excluded.
     local features = {
         'Silent Aim',
         'Aim Assist',
@@ -123,17 +153,16 @@ local function DisplayKeybinds()
     }
 
     local state = {}
+
     for _, name in ipairs(features) do
         state[name] = false
     end
-
-    local parent = game:GetService("CoreGui")
 
     local gui = Instance.new("ScreenGui")
     gui.Name = "GlimmerDisplay"
     gui.ResetOnSpawn = false
     gui.IgnoreGuiInset = true
-    gui.Parent = parent
+    gui.Parent = CoreGui
 
     local holder = Instance.new("Frame")
     holder.BackgroundTransparency = 1
@@ -174,6 +203,7 @@ local function DisplayKeybinds()
     )
 
     local labels = {}
+
     for _, name in ipairs(features) do
         labels[name] = makeLabel()
     end
@@ -182,6 +212,7 @@ local function DisplayKeybinds()
         for name, label in pairs(labels) do
             local enabled = state[name]
             local key = binds[name] or '?'
+
             local c = enabled
                 and Color3.fromRGB(0, 255, 0)
                 or (disp['Key Color'] or Color3.fromRGB(255, 0, 0))
@@ -215,8 +246,9 @@ local function DisplayKeybinds()
             end
 
             for _, name in ipairs(features) do
-                if binds[name]
-                    and input.KeyCode.Name == binds[name] then
+                local key = binds[name]
+
+                if key and input.KeyCode.Name == key then
                     state[name] = not state[name]
                 end
             end
@@ -225,12 +257,20 @@ local function DisplayKeybinds()
         end
     )
 
+    local destroyed = false
+
     shared.glimmer_display = {
         State = state,
 
         Destroy = function()
+            if destroyed then return end
+            destroyed = true
+
             connection:Disconnect()
-            gui:Destroy()
+
+            if gui.Parent then
+                gui:Destroy()
+            end
         end,
     }
 end
@@ -246,6 +286,7 @@ local function RapidFire()
     end
 
     local keyCode = Enum.KeyCode[cfg['Keybind'] or 'B']
+
     if not keyCode then
         warn("Rapid Fire: invalid keybind")
         return
@@ -295,7 +336,7 @@ end
 ------------------------------------------------------------------------
 -- INITIALIZE
 ------------------------------------------------------------------------
+getConfig()
 SkinChanger()
 DisplayKeybinds()
 RapidFire()
-```
