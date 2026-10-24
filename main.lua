@@ -5,7 +5,20 @@ local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 
 local player = Players.LocalPlayer
-        
+
+------------------------------------------------------------------------
+-- JUMP SETTING
+------------------------------------------------------------------------
+local function updateJumpSetting(character)
+    local humanoid = character:WaitForChild("Humanoid")
+    humanoid.UseJumpPower = false
+end
+
+if player.Character then
+    task.spawn(updateJumpSetting, player.Character)
+end
+
+player.CharacterAdded:Connect(updateJumpSetting)        
         
         return newindex(self, Index, Value);
     end)
