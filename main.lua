@@ -1,4 +1,3 @@
-```lua
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
@@ -286,4 +285,3 @@ end
 getConfig()
 SkinChanger()
 DisplayKeybinds()
-```
