@@ -6,9 +6,7 @@ local CoreGui = game:GetService("CoreGui")
 
 local player = Players.LocalPlayer
 
-------------------------------------------------------------------------
--- CLEANUP
-------------------------------------------------------------------------
+
 if shared.glimmer_display then
     pcall(function()
         shared.glimmer_display.Destroy()
@@ -146,7 +144,7 @@ local function DisplayKeybinds()
 
     local features = {
         'Silent Aim',
-        'Aim Assist',
+        'Camera Aimbot',
         'Trigger Bot',
         'Speed',
         'ESP',
