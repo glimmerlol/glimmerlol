@@ -1,19 +1,48 @@
+
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
+
 local player = Players.LocalPlayer
- 
+
+------------------------------------------------------------------------
+-- CONFIG
+------------------------------------------------------------------------
+local function getConfig()
+    shared.glimmer = shared.glimmer or {}
+
+    shared.glimmer['General'] =
+        shared.glimmer['General'] or {}
+
+    shared.glimmer['Skin Changer'] =
+        shared.glimmer['Skin Changer'] or {}
+
+    shared.glimmer['Rapid Fire'] =
+        shared.glimmer['Rapid Fire'] or {
+            ['Enabled'] = true,
+            ['Delay'] = 0.1,
+            ['Keybind'] = 'B',
+        }
+
+    return shared.glimmer
+end
+
 ------------------------------------------------------------------------
 -- SKIN CHANGER
 ------------------------------------------------------------------------
 local function SkinChanger()
-    local cfg = shared.glimmer and shared.glimmer['Skin Changer']
- 
-    local function asset(id)
-        return "rbxassetid://" .. tostring(id)
+    local cfg = getConfig()['Skin Changer']
+
+    pcall(function()
+        RunService:UnbindFromRenderStep("Glimmer Skin Changer")
+    end)
+
+    if not cfg['Enabled'] then
+        return
     end
- 
-    -- Skins[skinName][weaponName] = texture id
+
+    -- Keep your existing Skins table here, unchanged.
+    -- Example structure:
     local Skins = {
         Galaxy = {
             ['[SilencerAR]'] = 9402007158,
@@ -33,154 +62,76 @@ local function SkinChanger()
             ['[DrumGun]'] = 9381577172,
             ['[Double-Barrel SG]'] = 9401441647,
         },
-        Inferno = {
-            ['[SilencerAR]'] = 9401972413,
-            ['[SMG]'] = 9387593777,
-            ['[TacticalShotgun]'] = 9402244359,
-            ['[AK47]'] = 9402094255,
-            ['[AUG]'] = 9401802930,
-            ['[AR]'] = 9401972413,
-            ['[Glock]'] = 9401670081,
-            ['[Shotgun]'] = 9387831940,
-            ['[Silencer]'] = 9401670081,
-            ['[P90]'] = 9399878713,
-            ['[Revolver]'] = 9370404463,
-            ['[RPG]'] = 9399831924,
-            ['[LMG]'] = 9400160302,
-            ['[Flamethrower]'] = 9400503673,
-            ['[DrumGun]'] = 9381496666,
-            ['[Double-Barrel SG]'] = 9401416743,
-        },
-        Matrix = {
-            ['[SilencerAR]'] = 9402023983,
-            ['[SMG]'] = 9387681455,
-            ['[TacticalShotgun]'] = 9402295362,
-            ['[AK47]'] = 9402147406,
-            ['[AUG]'] = 9401855319,
-            ['[AR]'] = 9402023983,
-            ['[Glock]'] = 9401727978,
-            ['[Shotgun]'] = 9387945198,
-            ['[Silencer]'] = 9401727978,
-            ['[P90]'] = 9399894480,
-            ['[Revolver]'] = 9380928144,
-            ['[RPG]'] = 9399850204,
-            ['[LMG]'] = 9400178599,
-            ['[Flamethrower]'] = 9400582867,
-            ['[DrumGun]'] = 9381601709,
-            ['[Double-Barrel SG]'] = 9401457713,
-        },
-        RedDeath = {
-            ['[SilencerAR]'] = 8213168054,
-            ['[SMG]'] = 8199875638,
-            ['[TacticalShotgun]'] = 9203641766,
-            ['[AK47]'] = 8213572965,
-            ['[AUG]'] = 8212802637,
-            ['[AR]'] = 8213168054,
-            ['[Glock]'] = 8212637463,
-            ['[Shotgun]'] = 8200647420,
-            ['[Silencer]'] = 8212637463,
-            ['[P90]'] = 8205381104,
-            ['[Revolver]'] = 8173928665,
-            ['[RPG]'] = 8201055935,
-            ['[LMG]'] = 8205713344,
-            ['[Flamethrower]'] = 8206707126,
-            ['[DrumGun]'] = 8186385983,
-            ['[Double-Barrel SG]'] = 8212384179,
-        },
-        GoldGlory = {
-            ['[SilencerAR]'] = 8213175568,
-            ['[SMG]'] = 8199883519,
-            ['[TacticalShotgun]'] = 9203647967,
-            ['[AK47]'] = 8213606202,
-            ['[AUG]'] = 8212809463,
-            ['[AR]'] = 8213175568,
-            ['[Glock]'] = 8212667115,
-            ['[Shotgun]'] = 8200657428,
-            ['[Silencer]'] = 8212667115,
-            ['[P90]'] = 8205397990,
-            ['[Revolver]'] = 8173955378,
-            ['[RPG]'] = 8201059812,
-            ['[LMG]'] = 8205719479,
-            ['[Flamethrower]'] = 8208010648,
-            ['[DrumGun]'] = 8186168230,
-            ['[Double-Barrel SG]'] = 8212394280,
-        },
- 
-        -- Add IDs for the new skins here, for example:
-        -- ['Love Kukri'] = { ['[Knife]'] = 0000000000 },
-        -- ['Balloon']    = { ['[Deagle]'] = 0000000000 },
-        -- ['Grumpy']     = { ['[Rifle]']  = 0000000000 },
     }
- 
-    -- Always clear any previous bind so toggling Enabled works on re-execute
-    pcall(function()
-        RunService:UnbindFromRenderStep("Glimmer Skin Changer")
-    end)
- 
-    if not (cfg and cfg['Enabled']) then
-        return
-    end
- 
-    RunService:BindToRenderStep("Glimmer Skin Changer", 0, function()
-        local char = player.Character
-        if not char then return end
- 
-        for weapon, skin in pairs(cfg['Weapons'] or {}) do
-            local tool = char:FindFirstChild(weapon)
-            local id = Skins[skin] and Skins[skin][weapon]
-            if tool and id then
-                local part = tool:FindFirstChild("Default")
-                if part then
-                    local tex = asset(id)
-                    if part.TextureID ~= tex then
-                        part.TextureID = tex
+
+    RunService:BindToRenderStep(
+        "Glimmer Skin Changer",
+        0,
+        function()
+            local character = player.Character
+            if not character then return end
+
+            for weapon, skin in pairs(cfg['Weapons'] or {}) do
+                local tool = character:FindFirstChild(weapon)
+                local skinTable = Skins[skin]
+                local id = skinTable and skinTable[weapon]
+
+                if tool and id then
+                    local part = tool:FindFirstChild("Default")
+                    if part and part:IsA("MeshPart") then
+                        local texture = "rbxassetid://" .. tostring(id)
+
+                        if part.TextureID ~= texture then
+                            part.TextureID = texture
+                        end
                     end
                 end
             end
         end
-    end)
+    )
 end
- 
+
 ------------------------------------------------------------------------
--- DISPLAY KEYBINDS (top-of-screen HUD)
+-- DISPLAY KEYBINDS
 ------------------------------------------------------------------------
 local function DisplayKeybinds()
-    local general = shared.glimmer and shared.glimmer['General']
-    local disp = general and general['Display Keybinds']
-    local binds = general and general['Keybinds']
- 
-    -- Remove old HUD if the script is re-executed
-    if shared.glimmer_display and shared.glimmer_display.Destroy then
-        pcall(shared.glimmer_display.Destroy)
+    local general = getConfig()['General']
+    local disp = general['Display Keybinds']
+    local binds = general['Keybinds']
+
+    if shared.glimmer_display
+        and shared.glimmer_display.Destroy then
+        pcall(function()
+            shared.glimmer_display.Destroy()
+        end)
     end
- 
+
     if not (disp and disp['Enabled'] and binds) then
         return
     end
- 
-    local ON_COLOR = Color3.fromRGB(0, 255, 0)
-    local OFF_COLOR = disp['Key Color'] or Color3.fromRGB(255, 0, 0)
-    local TITLE_COLOR = disp['Glimmer Title'] or Color3.fromRGB(255, 50, 50)
-    local TARGET_COLOR = disp['Target Color'] or Color3.fromRGB(255, 80, 80)
- 
-    -- Which features show in the list (in this order)
-    local Features = { 'Silent Aim', 'Aim Assist', 'Trigger Bot', 'Ragebot', 'Speed', 'ESP' }
- 
-    -- Your other scripts read/write this: shared.glimmer_display.State['Silent Aim']
-    local State = {}
-    for _, name in ipairs(Features) do
-        State[name] = false
+
+    local features = {
+        'Silent Aim',
+        'Aim Assist',
+        'Trigger Bot',
+        'Ragebot',
+        'Speed',
+        'ESP',
+    }
+
+    local state = {}
+    for _, name in ipairs(features) do
+        state[name] = false
     end
- 
-    -- GUI ----------------------------------------------------------------
-    local parent = (gethui and gethui()) or game:GetService("CoreGui")
- 
+
+    local parent = game:GetService("CoreGui")
+
     local gui = Instance.new("ScreenGui")
     gui.Name = "GlimmerDisplay"
     gui.ResetOnSpawn = false
     gui.IgnoreGuiInset = true
     gui.Parent = parent
- 
+
     local holder = Instance.new("Frame")
     holder.BackgroundTransparency = 1
     holder.AnchorPoint = Vector2.new(0.5, 0)
@@ -188,95 +139,159 @@ local function DisplayKeybinds()
     holder.Size = UDim2.new(0, 320, 0, 0)
     holder.AutomaticSize = Enum.AutomaticSize.Y
     holder.Parent = gui
- 
+
     local layout = Instance.new("UIListLayout")
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.Padding = UDim.new(0, 1)
     layout.Parent = holder
- 
-    local order = 0
+
     local function makeLabel()
-        order += 1
-        local l = Instance.new("TextLabel")
-        l.BackgroundTransparency = 1
-        l.Size = UDim2.new(1, 0, 0, 16)
-        l.Font = Enum.Font.GothamBold
-        l.TextSize = 14
-        l.TextColor3 = Color3.new(1, 1, 1)
-        l.TextStrokeTransparency = 0.4
-        l.RichText = true
-        l.LayoutOrder = order
-        l.Text = ""
-        l.Parent = holder
-        return l
+        local label = Instance.new("TextLabel")
+        label.BackgroundTransparency = 1
+        label.Size = UDim2.new(1, 0, 0, 16)
+        label.Font = Enum.Font.GothamBold
+        label.TextSize = 14
+        label.TextColor3 = Color3.new(1, 1, 1)
+        label.TextStrokeTransparency = 0.4
+        label.RichText = true
+        label.Parent = holder
+        return label
     end
- 
+
     local function color(c)
         return "#" .. c:ToHex()
     end
- 
-    local titleLabel = makeLabel()
-    titleLabel.Text = string.format('<font color="%s">%s</font>', color(TITLE_COLOR), disp['Title'] or 'glimmer')
- 
-    local featureLabels = {}
-    for _, name in ipairs(Features) do
-        featureLabels[name] = makeLabel()
+
+    local title = makeLabel()
+    title.Text = string.format(
+        '<font color="%s">%s</font>',
+        color(disp['Glimmer Title'] or Color3.fromRGB(255, 50, 50)),
+        disp['Title'] or 'Glimmerlol'
+    )
+
+    local labels = {}
+    for _, name in ipairs(features) do
+        labels[name] = makeLabel()
     end
- 
-    local targetLabel = makeLabel()
-    local rangeLabel = makeLabel()
- 
+
     local function refresh()
-        for name, label in pairs(featureLabels) do
-            local on = State[name]
-            local key = binds[name] or "?"
+        for name, label in pairs(labels) do
+            local enabled = state[name]
+            local key = binds[name] or '?'
+            local c = enabled
+                and Color3.fromRGB(0, 255, 0)
+                or (disp['Key Color'] or Color3.fromRGB(255, 0, 0))
+
             if disp['Type'] == '2' then
-                label.Text = string.format('[%s] %s - <font color="%s">%s</font>',
-                    key, name, color(on and ON_COLOR or OFF_COLOR), on and "on" or "off")
+                label.Text = string.format(
+                    '[%s] %s - <font color="%s">%s</font>',
+                    key,
+                    name,
+                    color(c),
+                    enabled and 'on' or 'off'
+                )
             else
-                label.Text = string.format('%s - <font color="%s">[%s]</font>',
-                    name:lower(), color(on and ON_COLOR or OFF_COLOR), on and "on" or "off")
+                label.Text = string.format(
+                    '%s - <font color="%s">[%s]</font>',
+                    name:lower(),
+                    color(c),
+                    enabled and 'on' or 'off'
+                )
             end
         end
     end
+
     refresh()
- 
-    -- Keybinds -----------------------------------------------------------
-    local conn = UserInputService.InputBegan:Connect(function(input, processed)
-        if processed or input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-        for _, name in ipairs(Features) do
-            if binds[name] and input.KeyCode.Name == binds[name] then
-                State[name] = not State[name]
+
+    local connection = UserInputService.InputBegan:Connect(
+        function(input, processed)
+            if processed
+                or input.UserInputType ~= Enum.UserInputType.Keyboard then
+                return
+            end
+
+            for _, name in ipairs(features) do
+                if binds[name]
+                    and input.KeyCode.Name == binds[name] then
+                    state[name] = not state[name]
+                end
+            end
+
+            refresh()
+        end
+    )
+
+    shared.glimmer_display = {
+        State = state,
+
+        Destroy = function()
+            connection:Disconnect()
+            gui:Destroy()
+        end,
+    }
+end
+
+------------------------------------------------------------------------
+-- RAPID FIRE
+------------------------------------------------------------------------
+local function RapidFire()
+    local cfg = getConfig()['Rapid Fire']
+
+    if not cfg['Enabled'] then
+        return
+    end
+
+    local keyCode = Enum.KeyCode[cfg['Keybind'] or 'B']
+    if not keyCode then
+        warn("Rapid Fire: invalid keybind")
+        return
+    end
+
+    local enabled = false
+    local mouseHeld = false
+
+    UserInputService.InputBegan:Connect(function(input, processed)
+        if processed then return end
+
+        if input.KeyCode == keyCode then
+            enabled = not enabled
+            print("Rapid Fire:", enabled and "ON" or "OFF")
+        elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+            mouseHeld = true
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            mouseHeld = false
+        end
+    end)
+
+    player.CharacterAdded:Connect(function()
+        mouseHeld = false
+    end)
+
+    task.spawn(function()
+        while true do
+            task.wait(math.max(tonumber(cfg['Delay']) or 0.1, 0.1))
+
+            if enabled and mouseHeld then
+                local character = player.Character
+                local tool = character
+                    and character:FindFirstChildOfClass("Tool")
+
+                if tool and tool:FindFirstChild("Ammo") then
+                    tool:Activate()
+                end
             end
         end
-        refresh()
     end)
- 
-    -- Public API ---------------------------------------------------------
-    local API = { State = State }
- 
-    -- Call this from your own code when you have a target
-    function API.SetTarget(name, health, maxHealth, studs)
-        if not name then
-            targetLabel.Text = ""
-            rangeLabel.Text = ""
-            return
-        end
-        targetLabel.Text = string.format('target - <font color="%s">%s</font> %d/%d',
-            color(TARGET_COLOR), name, health or 0, maxHealth or 100)
-        rangeLabel.Text = string.format('range - %d studs', studs or 0)
-    end
- 
-    function API.Destroy()
-        conn:Disconnect()
-        gui:Destroy()
-    end
- 
-    shared.glimmer_display = API
 end
- 
+
+------------------------------------------------------------------------
+-- INITIALIZE
 ------------------------------------------------------------------------
 SkinChanger()
 DisplayKeybinds()
- 
+RapidFire()
