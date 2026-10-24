@@ -7,7 +7,7 @@ local CoreGui = game:GetService("CoreGui")
 local player = Players.LocalPlayer
 
 ------------------------------------------------------------------------
--- CLEANUP OLD HUD
+-- CLEANUP
 ------------------------------------------------------------------------
 if shared.glimmer_display then
     pcall(function()
@@ -39,16 +39,20 @@ local function getConfig()
     general['Display Keybinds'] =
         general['Display Keybinds'] or {}
 
-    config['Skin Changer'] = config['Skin Changer'] or {
-        ['Enabled'] = true,
-        ['Weapons'] = {},
-    }
-
     config['Rapid Fire'] = config['Rapid Fire'] or {
         ['Enabled'] = true,
         ['Delay'] = 0.1,
         ['Keybind'] = 'B',
     }
+
+    config['Skin Changer'] = config['Skin Changer'] or {
+        ['Enabled'] = true,
+        ['Weapons'] = {},
+    }
+
+    -- Keep the HUD and Rapid Fire keybind synchronized.
+    general['Keybinds']['Rapid Fire'] =
+        config['Rapid Fire']['Keybind'] or 'B'
 
     return config
 end
@@ -124,14 +128,6 @@ local function DisplayKeybinds()
     local disp = general['Display Keybinds']
     local binds = general['Keybinds']
 
-    -- Always remove any previous HUD first.
-    pcall(function()
-        local old = CoreGui:FindFirstChild("GlimmerDisplay")
-        if old then
-            old:Destroy()
-        end
-    end)
-
     if shared.glimmer_display then
         pcall(function()
             shared.glimmer_display.Destroy()
@@ -139,17 +135,22 @@ local function DisplayKeybinds()
         shared.glimmer_display = nil
     end
 
+    local old = CoreGui:FindFirstChild("GlimmerDisplay")
+    if old then
+        old:Destroy()
+    end
+
     if not (disp and disp['Enabled'] and binds) then
         return
     end
 
-    -- Ragebot is intentionally excluded.
     local features = {
         'Silent Aim',
         'Aim Assist',
         'Trigger Bot',
         'Speed',
         'ESP',
+        'Rapid Fire',
     }
 
     local state = {}
@@ -209,7 +210,8 @@ local function DisplayKeybinds()
     end
 
     local function refresh()
-        for name, label in pairs(labels) do
+        for _, name in ipairs(features) do
+            local label = labels[name]
             local enabled = state[name]
             local key = binds[name] or '?'
 
@@ -248,7 +250,10 @@ local function DisplayKeybinds()
             for _, name in ipairs(features) do
                 local key = binds[name]
 
-                if key and input.KeyCode.Name == key then
+                -- Rapid Fire is controlled by its own toggle.
+                if name ~= 'Rapid Fire'
+                    and key
+                    and input.KeyCode.Name == key then
                     state[name] = not state[name]
                 end
             end
@@ -261,6 +266,7 @@ local function DisplayKeybinds()
 
     shared.glimmer_display = {
         State = state,
+        Refresh = refresh,
 
         Destroy = function()
             if destroyed then return end
@@ -280,8 +286,13 @@ end
 ------------------------------------------------------------------------
 local function RapidFire()
     local cfg = getConfig()['Rapid Fire']
+    local display = shared.glimmer_display
 
     if not cfg['Enabled'] then
+        if display and display.State then
+            display.State['Rapid Fire'] = false
+            display.Refresh()
+        end
         return
     end
 
@@ -295,12 +306,28 @@ local function RapidFire()
     local enabled = false
     local mouseHeld = false
 
+    local function updateDisplay()
+        if shared.glimmer_display
+            and shared.glimmer_display.State then
+            shared.glimmer_display.State['Rapid Fire'] = enabled
+
+            if shared.glimmer_display.Refresh then
+                shared.glimmer_display.Refresh()
+            end
+        end
+    end
+
+    updateDisplay()
+
     UserInputService.InputBegan:Connect(function(input, processed)
         if processed then return end
 
         if input.KeyCode == keyCode then
             enabled = not enabled
+            updateDisplay()
+
             print("Rapid Fire:", enabled and "ON" or "OFF")
+
         elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
             mouseHeld = true
         end
