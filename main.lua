@@ -1,4 +1,3 @@
-now remake main.lua 
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
