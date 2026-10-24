@@ -6,7 +6,7 @@ local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
 ------------------------------------------------------------------------
--- CONFIG
+-- CONFIG VALIDATION
 ------------------------------------------------------------------------
 local function getConfig()
     shared.glimmer = shared.glimmer or {}
@@ -16,13 +16,6 @@ local function getConfig()
 
     shared.glimmer['Skin Changer'] =
         shared.glimmer['Skin Changer'] or {}
-
-    shared.glimmer['Rapid Fire'] =
-        shared.glimmer['Rapid Fire'] or {
-            ['Enabled'] = true,
-            ['Delay'] = 0.1,
-            ['Keybind'] = 'B',
-        }
 
     return shared.glimmer
 end
@@ -34,15 +27,14 @@ local function SkinChanger()
     local cfg = getConfig()['Skin Changer']
 
     pcall(function()
-        RunService:UnbindFromRenderStep("Glimmer Skin Changer")
+        RunService:UnbindFromRenderStep("GlimmerSkinChanger")
     end)
 
     if not cfg['Enabled'] then
         return
     end
 
-    -- Keep your existing Skins table here, unchanged.
-    -- Example structure:
+    -- Texture IDs from your original main.lua.
     local Skins = {
         Galaxy = {
             ['[SilencerAR]'] = 9402007158,
@@ -62,24 +54,29 @@ local function SkinChanger()
             ['[DrumGun]'] = 9381577172,
             ['[Double-Barrel SG]'] = 9401441647,
         },
+
+        -- Add the original Inferno, Matrix, RedDeath,
+        -- and GoldGlory tables here if you still use them.
     }
 
     RunService:BindToRenderStep(
-        "Glimmer Skin Changer",
-        0,
+        "GlimmerSkinChanger",
+        Enum.RenderPriority.Last.Value,
         function()
             local character = player.Character
             if not character then return end
 
             for weapon, skin in pairs(cfg['Weapons'] or {}) do
                 local tool = character:FindFirstChild(weapon)
-                local skinTable = Skins[skin]
-                local id = skinTable and skinTable[weapon]
+                local skinData = Skins[skin]
+                local textureId = skinData and skinData[weapon]
 
-                if tool and id then
+                if tool and textureId then
                     local part = tool:FindFirstChild("Default")
+
                     if part and part:IsA("MeshPart") then
-                        local texture = "rbxassetid://" .. tostring(id)
+                        local texture =
+                            "rbxassetid://" .. tostring(textureId)
 
                         if part.TextureID ~= texture then
                             part.TextureID = texture
@@ -92,7 +89,7 @@ local function SkinChanger()
 end
 
 ------------------------------------------------------------------------
--- DISPLAY KEYBINDS
+-- DISPLAY KEYBINDS HUD
 ------------------------------------------------------------------------
 local function DisplayKeybinds()
     local general = getConfig()['General']
@@ -114,91 +111,160 @@ local function DisplayKeybinds()
         'Silent Aim',
         'Aim Assist',
         'Trigger Bot',
-        'Ragebot',
         'Speed',
         'ESP',
     }
 
     local state = {}
+
     for _, name in ipairs(features) do
         state[name] = false
     end
 
-    local parent = game:GetService("CoreGui")
+    local parent
+    if gethui then
+        local ok, result = pcall(gethui)
+        if ok then
+            parent = result
+        end
+    end
+
+    parent = parent or player:WaitForChild("PlayerGui")
+
+    local oldGui = parent:FindFirstChild("GlimmerDisplay")
+    if oldGui then
+        oldGui:Destroy()
+    end
 
     local gui = Instance.new("ScreenGui")
     gui.Name = "GlimmerDisplay"
     gui.ResetOnSpawn = false
     gui.IgnoreGuiInset = true
+    gui.DisplayOrder = 20
     gui.Parent = parent
 
-    local holder = Instance.new("Frame")
-    holder.BackgroundTransparency = 1
-    holder.AnchorPoint = Vector2.new(0.5, 0)
-    holder.Position = UDim2.new(0.5, 0, 0, 10)
-    holder.Size = UDim2.new(0, 320, 0, 0)
-    holder.AutomaticSize = Enum.AutomaticSize.Y
-    holder.Parent = gui
+    local main = Instance.new("Frame")
+    main.Name = "Container"
+    main.AnchorPoint = Vector2.new(0.5, 0)
+    main.Position = UDim2.new(0.5, 0, 0, 16)
+    main.Size = UDim2.new(0, 235, 0, 0)
+    main.AutomaticSize = Enum.AutomaticSize.Y
+    main.BackgroundColor3 = Color3.fromRGB(19, 19, 24)
+    main.BackgroundTransparency = 0.05
+    main.BorderSizePixel = 0
+    main.Parent = gui
+
+    local mainCorner = Instance.new("UICorner")
+    mainCorner.CornerRadius = UDim.new(0, 10)
+    mainCorner.Parent = main
+
+    local outline = Instance.new("UIStroke")
+    outline.Color = Color3.fromRGB(95, 37, 48)
+    outline.Thickness = 1
+    outline.Transparency = 0.1
+    outline.Parent = main
+
+    local padding = Instance.new("UIPadding")
+    padding.PaddingTop = UDim.new(0, 10)
+    padding.PaddingBottom = UDim.new(0, 10)
+    padding.PaddingLeft = UDim.new(0, 10)
+    padding.PaddingRight = UDim.new(0, 10)
+    padding.Parent = main
 
     local layout = Instance.new("UIListLayout")
-    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, 1)
-    layout.Parent = holder
+    layout.Padding = UDim.new(0, 5)
+    layout.Parent = main
 
-    local function makeLabel()
-        local label = Instance.new("TextLabel")
-        label.BackgroundTransparency = 1
-        label.Size = UDim2.new(1, 0, 0, 16)
-        label.Font = Enum.Font.GothamBold
-        label.TextSize = 14
-        label.TextColor3 = Color3.new(1, 1, 1)
-        label.TextStrokeTransparency = 0.4
-        label.RichText = true
-        label.Parent = holder
-        return label
+    local function rounded(instance, radius)
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, radius)
+        corner.Parent = instance
     end
 
-    local function color(c)
-        return "#" .. c:ToHex()
-    end
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.BackgroundTransparency = 1
+    title.Size = UDim2.new(1, 0, 0, 23)
+    title.LayoutOrder = 1
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 16
+    title.Text = disp['Title'] or "Glimmerlol"
+    title.TextColor3 =
+        disp['Glimmer Title'] or Color3.fromRGB(255, 55, 70)
+    title.Parent = main
 
-    local title = makeLabel()
-    title.Text = string.format(
-        '<font color="%s">%s</font>',
-        color(disp['Glimmer Title'] or Color3.fromRGB(255, 50, 50)),
-        disp['Title'] or 'Glimmerlol'
-    )
+    local accent = Instance.new("Frame")
+    accent.Name = "Accent"
+    accent.Size = UDim2.new(1, 0, 0, 2)
+    accent.LayoutOrder = 2
+    accent.BackgroundColor3 = Color3.fromRGB(255, 55, 70)
+    accent.BorderSizePixel = 0
+    accent.Parent = main
+    rounded(accent, 2)
 
     local labels = {}
-    for _, name in ipairs(features) do
-        labels[name] = makeLabel()
+
+    for index, name in ipairs(features) do
+        local row = Instance.new("Frame")
+        row.Name = name:gsub("%s+", "")
+        row.Size = UDim2.new(1, 0, 0, 24)
+        row.LayoutOrder = index + 2
+        row.BackgroundColor3 = Color3.fromRGB(30, 30, 37)
+        row.BorderSizePixel = 0
+        row.Parent = main
+        rounded(row, 5)
+
+        local featureLabel = Instance.new("TextLabel")
+        featureLabel.BackgroundTransparency = 1
+        featureLabel.Position = UDim2.new(0, 8, 0, 0)
+        featureLabel.Size = UDim2.new(1, -64, 1, 0)
+        featureLabel.Font = Enum.Font.GothamMedium
+        featureLabel.TextSize = 11
+        featureLabel.TextXAlignment = Enum.TextXAlignment.Left
+        featureLabel.TextColor3 = Color3.fromRGB(225, 225, 232)
+        featureLabel.Text = string.lower(name)
+        featureLabel.Parent = row
+
+        local status = Instance.new("TextLabel")
+        status.Name = "Status"
+        status.AnchorPoint = Vector2.new(1, 0.5)
+        status.Position = UDim2.new(1, -6, 0.5, 0)
+        status.Size = UDim2.new(0, 43, 0, 17)
+        status.BackgroundColor3 = Color3.fromRGB(67, 31, 38)
+        status.BorderSizePixel = 0
+        status.Font = Enum.Font.GothamBold
+        status.TextSize = 10
+        status.Text = "OFF"
+        status.TextColor3 = Color3.fromRGB(255, 105, 115)
+        status.Parent = row
+        rounded(status, 4)
+
+        labels[name] = {
+            row = row,
+            feature = featureLabel,
+            status = status,
+        }
     end
 
     local function refresh()
-        for name, label in pairs(labels) do
+        for _, name in ipairs(features) do
+            local item = labels[name]
             local enabled = state[name]
-            local key = binds[name] or '?'
-            local c = enabled
-                and Color3.fromRGB(0, 255, 0)
-                or (disp['Key Color'] or Color3.fromRGB(255, 0, 0))
 
-            if disp['Type'] == '2' then
-                label.Text = string.format(
-                    '[%s] %s - <font color="%s">%s</font>',
-                    key,
-                    name,
-                    color(c),
-                    enabled and 'on' or 'off'
-                )
-            else
-                label.Text = string.format(
-                    '%s - <font color="%s">[%s]</font>',
-                    name:lower(),
-                    color(c),
-                    enabled and 'on' or 'off'
-                )
-            end
+            item.status.Text = enabled and "ON" or "OFF"
+
+            item.status.TextColor3 = enabled
+                and Color3.fromRGB(105, 255, 160)
+                or Color3.fromRGB(255, 105, 115)
+
+            item.status.BackgroundColor3 = enabled
+                and Color3.fromRGB(24, 67, 46)
+                or Color3.fromRGB(67, 31, 38)
+
+            item.feature.TextColor3 = enabled
+                and Color3.fromRGB(255, 255, 255)
+                or Color3.fromRGB(190, 190, 200)
         end
     end
 
@@ -206,14 +272,15 @@ local function DisplayKeybinds()
 
     local connection = UserInputService.InputBegan:Connect(
         function(input, processed)
-            if processed
-                or input.UserInputType ~= Enum.UserInputType.Keyboard then
+            if processed then return end
+            if input.UserInputType ~= Enum.UserInputType.Keyboard then
                 return
             end
 
             for _, name in ipairs(features) do
-                if binds[name]
-                    and input.KeyCode.Name == binds[name] then
+                local key = binds[name]
+
+                if key and input.KeyCode.Name == key then
                     state[name] = not state[name]
                 end
             end
@@ -225,6 +292,13 @@ local function DisplayKeybinds()
     shared.glimmer_display = {
         State = state,
 
+        SetState = function(name, enabled)
+            if state[name] ~= nil then
+                state[name] = enabled
+                refresh()
+            end
+        end,
+
         Destroy = function()
             connection:Disconnect()
             gui:Destroy()
@@ -233,65 +307,7 @@ local function DisplayKeybinds()
 end
 
 ------------------------------------------------------------------------
--- RAPID FIRE
-------------------------------------------------------------------------
-local function RapidFire()
-    local cfg = getConfig()['Rapid Fire']
-
-    if not cfg['Enabled'] then
-        return
-    end
-
-    local keyCode = Enum.KeyCode[cfg['Keybind'] or 'B']
-    if not keyCode then
-        warn("Rapid Fire: invalid keybind")
-        return
-    end
-
-    local enabled = false
-    local mouseHeld = false
-
-    UserInputService.InputBegan:Connect(function(input, processed)
-        if processed then return end
-
-        if input.KeyCode == keyCode then
-            enabled = not enabled
-            print("Rapid Fire:", enabled and "ON" or "OFF")
-        elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
-            mouseHeld = true
-        end
-    end)
-
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            mouseHeld = false
-        end
-    end)
-
-    player.CharacterAdded:Connect(function()
-        mouseHeld = false
-    end)
-
-    task.spawn(function()
-        while true do
-            task.wait(math.max(tonumber(cfg['Delay']) or 0.1, 0.1))
-
-            if enabled and mouseHeld then
-                local character = player.Character
-                local tool = character
-                    and character:FindFirstChildOfClass("Tool")
-
-                if tool and tool:FindFirstChild("Ammo") then
-                    tool:Activate()
-                end
-            end
-        end
-    end)
-end
-
-------------------------------------------------------------------------
 -- INITIALIZE
 ------------------------------------------------------------------------
 SkinChanger()
 DisplayKeybinds()
-RapidFire()
