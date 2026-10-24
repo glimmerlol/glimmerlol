@@ -5,33 +5,6 @@ local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 
 local player = Players.LocalPlayer
-
-
-local function getHumanoid()
-    local character = LocalPlayer.Character
-    if character and character:FindFirstChildOfClass("Humanoid") then
-        return character:FindFirstChildOfClass("Humanoid")
-    end
-end
-
-
-RunService.Heartbeat:Connect(function()
-    local humanoid = getHumanoid()
-    if humanoid then
-        humanoid.UseJumpPower = false
-    end
-end)
- if not game.IsLoaded(game) then 
-        game.Loaded.Wait(game.Loaded);
-    end
-    
-    local IsA = game.IsA;
-    local newindex = nil 
-    
-    newindex = hookmetamethod(game, "__newindex", function(self, Index, Value)
-        if not checkcaller() and IsA(self, "Humanoid") and Index == "JumpPower" then 
-            return
-        end
         
         
         return newindex(self, Index, Value);
